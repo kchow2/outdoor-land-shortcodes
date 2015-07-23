@@ -528,3 +528,192 @@ function popular_cat_loc_format_result($title, $data) {
     $res .= '</div>';
     return $res;
 }
+
+
+//author-footprint shortcode.
+//Usage: [author-footprint author="<author_id>"]
+function author_footprint_sc($atts) {
+
+    if (!isset($atts['author']) || !is_numeric($atts['author']))
+        return 'author-footprint: author attribute not valid! Must be a valid author Id.';
+    $authorId = $atts['author'];
+    $title = 'My Footprint';
+    //$maxPostCountPerSection = 15;
+    
+    //get all the activities for this category
+    $queryArgs = array(
+        'post_type' => 'activity',
+        'author' => $authorId,
+        'posts_per_page' => -1,
+        'orderby' => 'title',
+        'order' => 'ASC',
+    );
+    $query = new WP_Query($queryArgs);
+    $countryActivityCount = array();
+    $regionActivityCount = array();
+    $cityActivityCount = array();
+    $destinationActivityCount = array();
+    $locSlugs = array();
+    while ($query->have_posts()) {
+        $query->the_post();
+
+        $countryTerms = wp_get_post_terms(get_the_ID(), 'tr-country');
+        $cityTerms = wp_get_post_terms(get_the_ID(), 'tr-city');
+        $regionTerms = wp_get_post_terms(get_the_ID(), 'tr-region');
+        $destinationTerms = wp_get_post_terms(get_the_ID(), 'tr-destination');
+        
+        //count the number of activities for each location
+        foreach($countryTerms as $term){
+            $locName = $term->name;
+            $locSlug = $term->slug;
+            if(isset($countryActivityCount[$locName]))
+                $countryActivityCount[$locName]++;
+            else{
+                $countryActivityCount[$locName] = 1;
+                $locSlugs[$locName] = $locSlug;
+            }
+        }
+        foreach($cityTerms as $term){
+            $locName = $term->name;
+            $locSlug = $term->slug;
+            if(isset($cityActivityCount[$locName]))
+                $cityActivityCount[$locName]++;
+            else{
+                $cityActivityCount[$locName] = 1;
+                $locSlugs[$locName] = $locSlug;
+            }
+        }
+        foreach($regionTerms as $term){
+            $locName = $term->name;
+            $locSlug = $term->slug;
+            if(isset($regionActivityCount[$locName]))
+                $regionActivityCount[$locName]++;
+            else{
+                $regionActivityCount[$locName] = 1;
+                $locSlugs[$locName] = $locSlug;
+            }
+        }
+        foreach($destinationTerms as $term){
+            $locName = $term->name;
+            $locSlug = $term->slug;
+            if(isset($destinationActivityCount[$locName]))
+                $destinationActivityCount[$locName]++;
+            else{
+                $destinationActivityCount[$locName] = 1;
+                $locSlugs[$locName] = $locSlug;
+            }
+        }
+    }
+
+    //generate the data we will use to display the location list
+    $countryData = array();
+    $cityData = array();
+    $regionData = array();
+    $destinationData = array();
+    
+    foreach($countryActivityCount as $location=>$activityCount){
+        $countryData[] = array('title'=>$location, 'activity_count'=>$activityCount, 'url'=>'/country/'.$locSlugs[$location]);
+    }
+    foreach($cityActivityCount as $location=>$activityCount){
+        $cityData[] = array('title'=>$location, 'activity_count'=>$activityCount, 'url'=>'/city/'.$locSlugs[$location]);
+    }
+    foreach($regionActivityCount as $location=>$activityCount){
+        $regionData[] = array('title'=>$location, 'activity_count'=>$activityCount, 'url'=>'/region/'.$locSlugs[$location]);
+    }
+    foreach($destinationActivityCount as $location=>$activityCount){
+        $destinationData[] = array('title'=>$location, 'activity_count'=>$activityCount, 'url'=>'/destination/'.$locSlugs[$location]);
+    }
+    
+    //sort the result list alphabetically
+    usort($countryData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
+    usort($cityData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
+    usort($regionData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
+    usort($destinationData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
+    
+    //post counts for tips nad reviews
+    $guidePostCount = count_user_posts($authorId, 'guide');
+    $reviewPostCount = count_user_posts($authorId, 'gear-review');
+
+    //Generate the output
+    $res = author_footprint_format_result($title, $countryData, $cityData, $regionData, $destinationData, $guidePostCount, $reviewPostCount);
+    wp_reset_postdata();
+    return $res;
+}
+add_shortcode('author-footprint', 'author_footprint_sc');
+
+//helper function to format the HTML output from the found results
+function author_footprint_format_result($title, $countryData, $cityData, $regionData, $destinationData, $guidePostCount, $reviewPostCount) {
+    if (empty($countryData) && empty($cityData) && empty($regionData) && empty($destinationData))
+        return '';
+    $res = '<div class="tr-pop-locations tr-pop-destinations">';
+    $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
+    
+    if(count($countryData) > 0){
+        $res .= '<h3 style="text-align:left;">' . 'Countries:' . '</h3>';
+        $res .= '<ul style="width:100%; padding-left:0px; overflow:hidden;">';
+        foreach ($countryData as $location) {
+            $locUrl = $location['url'];
+            $locTitle = $location['title'];
+            $activityCount = $location['activity_count'];
+
+            $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+            $res .= "<a href=\"$locUrl\">$locTitle</a>";
+            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= '</li>';
+        }
+        $res .= '</ul>';
+    }
+    
+    if(count($regionData) > 0){
+        $res .= '<h3 style="text-align:left;">' . 'Regions:' . '</h3>';
+        $res .= '<ul style="width:100%; padding-left:0px; overflow:hidden;">';
+        foreach ($regionData as $location) {
+            $locUrl = $location['url'];
+            $locTitle = $location['title'];
+            $activityCount = $location['activity_count'];
+
+            $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+            $res .= "<a href=\"$locUrl\">$locTitle</a>";
+            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= '</li>';
+        }
+        $res .= '</ul>';
+    }
+    
+    if(count($cityData) > 0){
+        $res .= '<h3 style="text-align:left;">' . 'Cities:' . '</h3>';
+        $res .= '<ul style="width:100%; padding-left:0px; overflow:hidden;">';
+        foreach ($cityData as $location) {
+            $locUrl = $location['url'];
+            $locTitle = $location['title'];
+            $activityCount = $location['activity_count'];
+
+            $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+            $res .= "<a href=\"$locUrl\">$locTitle</a>";
+            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= '</li>';
+        }
+        $res .= '</ul>';
+    }
+    
+    if(count($destinationData) > 0){
+        $res .= '<h3 style="text-align:left;">' . 'Destinations:' . '</h3>';
+        $res .= '<ul style="width:100%; padding-left:0px; overflow:hidden;">';
+        foreach ($destinationData as $location) {
+            $locUrl = $location['url'];
+            $locTitle = $location['title'];
+            $activityCount = $location['activity_count'];
+
+            $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+            $res .= "<a href=\"$locUrl\">$locTitle</a>";
+            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= '</li>';
+        }
+        $res .= '</ul>';
+    }
+    
+    $res .= "<h3>Tips: $guidePostCount, Reviews: $reviewPostCount</h3><br>";
+    
+    $res .= '</div>';//tr-pop-locations tr-pop-destinations
+    return $res;
+}
