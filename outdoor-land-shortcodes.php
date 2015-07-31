@@ -136,7 +136,7 @@ function popular_loc_format_result($title, $totalActivityCount, $data) {
 
         $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
         $res .= "<a href=\"$locUrl\">$locTitle</a>";
-        $res .= ' ( ' . $activityCount . ' ) ';
+        $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
     }
     $res .= '</ul>';
@@ -258,7 +258,7 @@ function popular_activities_format_result($title, $totalActivityCount, $data) {
 
         $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
         $res .= "<a href=\"$url\">$title</a>";
-        $res .= ' ( ' . $activityCount . ' ) ';
+        $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
     }
     $res .= '</ul>';
@@ -312,7 +312,7 @@ function top_contributors_sc($atts) {
     $usersHidden = 0;
     $resultData = array();
     foreach ($userQueryResults as $user) {
-        $authorUrl = $user->user_url;
+        $authorUrl = get_author_posts_url( $user->ID );//'/authors/'.$user->nickname;
         $userName = $user->nickname;
         $avatar = get_user_meta($user->ID, 'wpcf-tr-user-profile-image', true);
         $postCount = 0;
@@ -331,10 +331,6 @@ function top_contributors_sc($atts) {
             );
             $query = new WP_Query($queryArgs);
             $postCount += $query->found_posts;
-            //$posts=$query->get_posts();
-            //foreach($posts as $p){
-            //    echo $p->post_title." (".$user->nickname.')<br>';
-            //}  
         }
 
         if ($postCount > 0) {
@@ -521,7 +517,7 @@ function popular_cat_loc_format_result($title, $data) {
 
         $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
         $res .= "<a href=\"$locUrl\">$locTitle</a>";
-        $res .= ' ( ' . $activityCount . ' ) ';
+        $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
     }
     $res .= '</ul>';
@@ -658,7 +654,7 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
 
             $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
             $res .= "<a href=\"$locUrl\">$locTitle</a>";
-            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= ' (' . $activityCount . ') ';
             $res .= '</li>';
         }
         $res .= '</ul>';
@@ -674,7 +670,7 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
 
             $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
             $res .= "<a href=\"$locUrl\">$locTitle</a>";
-            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= ' (' . $activityCount . ') ';
             $res .= '</li>';
         }
         $res .= '</ul>';
@@ -690,7 +686,7 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
 
             $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
             $res .= "<a href=\"$locUrl\">$locTitle</a>";
-            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= ' (' . $activityCount . ') ';
             $res .= '</li>';
         }
         $res .= '</ul>';
@@ -706,7 +702,7 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
 
             $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
             $res .= "<a href=\"$locUrl\">$locTitle</a>";
-            $res .= ' ( ' . $activityCount . ' ) ';
+            $res .= ' (' . $activityCount . ') ';
             $res .= '</li>';
         }
         $res .= '</ul>';
@@ -715,5 +711,79 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
     $res .= "<h3>Tips: $guidePostCount, Reviews: $reviewPostCount</h3><br>";
     
     $res .= '</div>';//tr-pop-locations tr-pop-destinations
+    return $res;
+}
+
+
+function hotel_search_sc($atts) {
+    $taxonomyLookup = array(
+        'destination' => 'tr-destination',
+        'subregion' => 'tr-subregion',
+        'region' => 'tr-region',
+        'city' => 'tr-city',
+        'state' => 'tr-state',
+        'country' => 'tr-country',
+    );
+    
+    //check if the hotel search url is present for this location. If it is, then we are done.
+    $locationName = the_title("", "", false);
+    $hotelSearchUrl = get_post_meta(get_the_ID(), 'wpcf-tr-hotel-search', true);
+    
+    //if the $hotelSearchUrl is not present for this location, then we need to search parent locations until we find one
+    if(!$locationName || !$hotelSearchUrl){
+        //get the metadata for the current location page.
+        //We need the subregion, region, city, state, country, continent of this location
+        $articleId = get_the_ID(); 
+        foreach($taxonomyLookup as $postType=>$tax){
+            
+            $taxonomyTermObjs = wp_get_post_terms($articleId, $tax);
+            if(!$taxonomyTermObjs)
+                $taxonomyTermObjs = array();
+            foreach($taxonomyTermObjs as $obj){
+                $taxTermSlug = $obj->slug;
+                $taxTermName = $obj->name;
+                $queryArgs = array(
+                    'post_type' => $postType,
+                    'posts_per_page' => -1,
+                    'tax_query' => array(
+                        array(
+                            'taxonomy' => $tax,
+                            'field' => 'slug',
+                            'terms' => $taxTermSlug,
+                        ),
+                    )
+                );
+                $query = new WP_Query($queryArgs);
+                if ($query->have_posts()) {
+                    $query->the_post();
+                    $hotelSearchUrl = get_post_meta(get_the_ID(), 'wpcf-tr-hotel-search', true);
+                    if(!empty($hotelSearchUrl)){
+                        $locationName = $taxTermName;
+                        break;
+                    }
+                }
+            }
+            if(!empty($hotelSearchUrl))
+                break;
+        }
+    }
+
+    //Generate the output
+    $res = hotel_search_format_result($locationName, $hotelSearchUrl);
+    wp_reset_postdata();
+    return $res;
+}
+add_shortcode('hotel-search', 'hotel_search_sc');
+
+function hotel_search_format_result($locationName, $hotelSearchUrl){
+    if(!$locationName || !$hotelSearchUrl)
+        return '';
+    
+    $res = "";
+    $res.= '<div class="tr-hotel-search">';
+    $res .= '<a href="'.$hotelSearchUrl.'" target="_blank" class="btn btn-primary">';
+    $res .= 'Compare Hotels in<br>'.$locationName;
+    $res .= '</a>';
+    $res .= '</div>';
     return $res;
 }
