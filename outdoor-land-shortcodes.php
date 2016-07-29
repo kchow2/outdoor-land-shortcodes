@@ -366,7 +366,7 @@ function top_contributors_format_result($title, $data) {
     $itemsPerRow = 4;
     $numRows = ceil(count($data) / $itemsPerRow);
 
-    $res .= '<div class="tr-pop-locations tr-pop-destinations">';
+    $res = '<div class="tr-pop-locations tr-pop-destinations">';
     $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
     for ($row = 0; $row < $numRows; $row++) {
         $res .= '<div class="row">';
