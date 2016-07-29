@@ -480,7 +480,8 @@ function popular_cat_loc_sc($atts) {
     foreach($locationArticleCount as $location=>$activityCount){
         if($locationsDisplayed == $maxPostCount)
             break;
-        $resultData[] = array('title'=>$location, 'activity_count'=>$activityCount);
+        $locationUrl = get_site_url() . '/' . $atts['target'] . '/'. $location;
+        $resultData[] = array('title'=>$location, 'activity_count'=>$activityCount, 'url'=>$locationUrl);
         $locationsDisplayed++;
     }
     
