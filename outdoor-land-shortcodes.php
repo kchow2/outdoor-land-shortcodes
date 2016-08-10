@@ -538,7 +538,6 @@ function author_footprint_sc($atts) {
     
     //get all the activities for this category
     $queryArgs = array(
-        'post_type' => 'activity',
         'author' => $authorId,
         'posts_per_page' => -1,
         'orderby' => 'title',
