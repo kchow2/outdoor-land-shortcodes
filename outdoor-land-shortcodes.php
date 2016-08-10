@@ -530,7 +530,6 @@ function popular_cat_loc_format_result($title, $data) {
 //author-footprint shortcode.
 //Usage: [author-footprint author="<author_id>"]
 function author_footprint_sc($atts) {
-
     if (!isset($atts['author']) || !is_numeric($atts['author']))
         return 'author-footprint: author attribute not valid! Must be a valid author Id.';
     $authorId = $atts['author'];
@@ -545,19 +544,19 @@ function author_footprint_sc($atts) {
         'orderby' => 'title',
         'order' => 'ASC',
     );
-    $query = new WP_Query($queryArgs);
+    $posts = get_posts($queryArgs);
     $countryActivityCount = array();
     $regionActivityCount = array();
     $cityActivityCount = array();
     $destinationActivityCount = array();
     $locSlugs = array();
-    while ($query->have_posts()) {
-        $query->the_post();
-
-        $countryTerms = wp_get_post_terms(get_the_ID(), 'tr-country');
-        $cityTerms = wp_get_post_terms(get_the_ID(), 'tr-city');
-        $regionTerms = wp_get_post_terms(get_the_ID(), 'tr-region');
-        $destinationTerms = wp_get_post_terms(get_the_ID(), 'tr-destination');
+    foreach($posts as $post) {
+        setup_postdata( $post );
+        
+        $countryTerms = wp_get_post_terms($post->ID, 'tr-country');
+        $cityTerms = wp_get_post_terms($post->ID, 'tr-city');
+        $regionTerms = wp_get_post_terms($post->ID, 'tr-region');
+        $destinationTerms = wp_get_post_terms($post->ID, 'tr-destination');
         
         //count the number of activities for each location
         foreach($countryTerms as $term){
