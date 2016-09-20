@@ -786,3 +786,62 @@ function hotel_search_format_result($locationName, $hotelSearchUrl){
     $res .= '</div>';
     return $res;
 }
+
+function locationID_sc($atts) {
+    $taxonomyLookup = array(
+        'route'=>'tr-route',
+        'city'=>'tr-city',
+        'destination'=>'tr-destination',
+        'sub-region'=>'tr-subregion',
+        'state'=>'tr-state',
+        'region'=>'tr-region',
+        'country'=>'tr-country',
+        'continent'=>'tr-continent',
+        );
+    
+    if(!isset($atts['id'])){
+        return "Usage: [locationID id=\"<XX>\"]";
+    }
+    
+    $termList = wp_get_post_terms($atts['id'], array_values($taxonomyLookup), array());
+    
+    if(count($termList) > 0){
+        $minIndex = count($taxonomyLookup);
+        $minTerm = null;
+        $s = "";
+        
+        foreach($termList as $t){
+            $index = array_search($t->taxonomy, array_values($taxonomyLookup));
+            if($index !== FALSE and $index < $minIndex){
+                $minIndex = $index;
+                $minTerm = $t;
+            }
+            $s .= "{". $index.",". $t->taxonomy. ",". $t->name ."}";
+        }
+        if($minTerm != null){
+            //get all the activities for this category
+            $queryArgs = array(
+                'post_type'=>substr($minTerm->taxonomy, 3),
+                'tax_query' => array(
+		array(
+			'taxonomy' => $minTerm->taxonomy,
+			'field' => 'slug',
+			'terms' => $minTerm->slug
+		)
+	)
+            );
+            $posts = get_posts($queryArgs);
+            foreach($posts as $post){
+                //return "All terms:" . $s . " Most related:" . $minTerm->slug . " minIndex=".$minIndex . "POST ID:".$post->ID;
+                return $post->ID;
+            }
+            
+            
+            
+        }
+
+    }
+
+    return "";
+}
+add_shortcode('locationID', 'locationID_sc');
