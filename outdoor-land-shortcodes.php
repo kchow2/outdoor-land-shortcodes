@@ -800,7 +800,7 @@ function locationID_sc($atts) {
         );
     
     if(!isset($atts['id'])){
-        return "Usage: [locationID id=\"<XX>\"]";
+        return htmlspecialchars("Usage: [location-id id=<XX>]");
     }
     
     $termList = wp_get_post_terms($atts['id'], array_values($taxonomyLookup), array());
@@ -844,4 +844,4 @@ function locationID_sc($atts) {
 
     return "";
 }
-add_shortcode('locationID', 'locationID_sc');
+add_shortcode('location-id', 'locationID_sc');
