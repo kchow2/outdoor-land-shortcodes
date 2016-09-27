@@ -713,7 +713,6 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
     return $res;
 }
 
-
 function hotel_search_sc($atts) {
     $taxonomyLookup = array(
         'destination' => 'tr-destination',
@@ -787,7 +786,11 @@ function hotel_search_format_result($locationName, $hotelSearchUrl){
     return $res;
 }
 
-function locationID_sc($atts) {
+/**
+ * Generates a map with markers for posts in the same location as the parent article. 
+ * For each post, the most specific location is determined, and posts with the same location are merged into a single marker.
+ */
+function activity_post_map_sc($atts) {
     $taxonomyLookup = array(
         'route'=>'tr-route',
         'city'=>'tr-city',
@@ -799,49 +802,82 @@ function locationID_sc($atts) {
         'continent'=>'tr-continent',
         );
     
-    if(!isset($atts['id'])){
-        return htmlspecialchars("Usage: [location-id id=<XX>]");
+    if(!isset($atts['slug']) or !isset($atts['type'])){
+        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX>]");
     }
     
-    $termList = wp_get_post_terms($atts['id'], array_values($taxonomyLookup), array());
-    
-    if(count($termList) > 0){
-        $minIndex = count($taxonomyLookup);
-        $minTerm = null;
-        $s = "";
+    $queryArgs = array(
+        'post_type' => 'post',
+        'tax_query' => array(
+            array(
+                'taxonomy' => $taxonomyLookup[$atts['type']],
+                'field' => 'slug',
+                'terms' => $atts['slug'],
+            ),
+        )
+    );
+
+    $locations = array();
+    $postsByLocationID = array();
+    $query = new WP_Query($queryArgs);
+    while ($query->have_posts()) {
+        $query->the_post();
         
+        $loc = getMostRelevantLocation(get_the_ID(), array_values($taxonomyLookup));    //returns a post object
+        if($loc === null) 
+            break;
+        $locations[$loc->ID] = $loc;
+        $postsByLocationID[$loc->ID][] = array('ID'=>get_the_ID(), 'title'=>get_the_title(), 'url'=>get_permalink());
+    }
+    
+    //results - display the locations on a map. each location can have 1 or more posts, which are combined into a single marker.
+    $res = '<div class="activity-post-map">';
+    $res .= do_shortcode('[wpv-map-render map_id="map-location-posts"]');
+    foreach($postsByLocationID as $locID=>$posts){
+        $postsStr = "";
+        foreach($posts as $p){
+            $postsStr .= '<a href="'.$p['url'].'">' . $p['title'] . "</a><br>";
+        }
+        $res .= do_shortcode(sprintf('[wpv-map-marker map_id="map-location-posts" marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $locations[$locID]->post_name, $locID, $postsStr));
+    }
+    $res .= "</div>";
+
+    wp_reset_postdata();
+    return $res;
+}
+add_shortcode('activity-post-map', 'activity_post_map_sc');
+
+function getMostRelevantLocation($postID, array $taxonomies){
+    $termList = wp_get_post_terms($postID, $taxonomies);
+    if(count($termList) > 0){
+        $minIndex = count($taxonomies);
+        $minTerm = null;
+
+        //pick the most specific location of the article, according to the order in $taxonomyLookup
         foreach($termList as $t){
-            $index = array_search($t->taxonomy, array_values($taxonomyLookup));
+            $index = array_search($t->taxonomy, $taxonomies);
             if($index !== FALSE and $index < $minIndex){
                 $minIndex = $index;
                 $minTerm = $t;
             }
-            $s .= "{". $index.",". $t->taxonomy. ",". $t->name ."}";
         }
         if($minTerm != null){
-            //get all the activities for this category
             $queryArgs = array(
-                'post_type'=>substr($minTerm->taxonomy, 3),
+                'post_type'=>substr($minTerm->taxonomy, 3), //remove the 'tr-' in front of the term
                 'tax_query' => array(
-		array(
-			'taxonomy' => $minTerm->taxonomy,
-			'field' => 'slug',
-			'terms' => $minTerm->slug
-		)
-	)
+                    array(
+                            'taxonomy' => $minTerm->taxonomy,
+                            'field' => 'slug',
+                            'terms' => $minTerm->slug
+                    )
+                )
             );
             $posts = get_posts($queryArgs);
             foreach($posts as $post){
-                //return "All terms:" . $s . " Most related:" . $minTerm->slug . " minIndex=".$minIndex . "POST ID:".$post->ID;
-                return $post->ID;
+                //should be either 0 or 1 location CPT entry
+                return $post;
             }
-            
-            
-            
         }
-
     }
-
-    return "";
+    return null;
 }
-add_shortcode('location-id', 'locationID_sc');
