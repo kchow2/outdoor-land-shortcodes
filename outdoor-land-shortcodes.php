@@ -803,11 +803,16 @@ function activity_post_map_sc($atts) {
         );
     
     if(!isset($atts['slug']) or !isset($atts['type'])){
-        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX>]");
+        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX> (limit=<XX>)]");
     }
+    if(!isset($atts['limit']))
+        $limit = 10;
+    else
+        $limit = intval($atts['limit']);
     
     $queryArgs = array(
         'post_type' => 'post',
+        'posts_per_page'=>$limit,   //apparently leaving this parameter out results in the default limit of 10 results returned!
         'tax_query' => array(
             array(
                 'taxonomy' => $taxonomyLookup[$atts['type']],
