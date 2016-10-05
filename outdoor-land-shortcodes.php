@@ -812,7 +812,7 @@ function activity_post_map_sc($atts) {
     
     $queryArgs = array(
         'post_type' => 'post',
-        'posts_per_page'=>$limit,   //apparently leaving this parameter out results in the default limit of 10 results returned!
+        'posts_per_page'=>-1,   //apparently leaving this parameter out results in the default limit of 10 results returned!
         'tax_query' => array(
             array(
                 'taxonomy' => $taxonomyLookup[$atts['type']],
@@ -832,16 +832,25 @@ function activity_post_map_sc($atts) {
         if($loc === null) 
             break;
         $locations[$loc->ID] = $loc;
+        
+        //limit the number of posts per location
+        if(array_key_exists($loc->ID, $postsByLocationID) and count($postsByLocationID[$loc->ID]) >= $limit)
+            break;
+        
         $postsByLocationID[$loc->ID][] = array('ID'=>get_the_ID(), 'title'=>get_the_title(), 'url'=>get_permalink());
     }
     
     //results - display the locations on a map. each location can have 1 or more posts, which are combined into a single marker.
     $res = '<div class="activity-post-map">';
-    $res .= do_shortcode('[wpv-map-render map_id="map-location-posts"]');
+    $res .= do_shortcode('[wpv-map-render map_id="map-location-posts" map_height="450px"]');
     foreach($postsByLocationID as $locID=>$posts){
-        $postsStr = "";
+        //location map markers
+        $locName = $locations[$locID]->post_title;
+        $locUrl = get_post_permalink($locations[$locID]->ID);
+        $postsStr = '<div class="tr-marker-title"><a href="'.$locUrl.'" target="_blank">'.$locName.'</a></div><br>';
+        
         foreach($posts as $p){
-            $postsStr .= '<a href="'.$p['url'].'">' . $p['title'] . "</a><br>";
+            $postsStr .= '<a href="'.$p['url'].'" target="_blank">' . $p['title'] . "</a><br>";
         }
         $res .= do_shortcode(sprintf('[wpv-map-marker map_id="map-location-posts" marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $locations[$locID]->post_name, $locID, $postsStr));
     }
