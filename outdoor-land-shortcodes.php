@@ -363,38 +363,41 @@ function top_contributors_format_result($title, $data) {
     if (empty($data))
         return '';
 
-    $itemsPerRow = 4;
+    $itemsPerRow = 8;
+    $sectionsPerRow = 2;
     $numRows = ceil(count($data) / $itemsPerRow);
+    $itemsPerSection = $itemsPerRow / $sectionsPerRow;
 
-    $res = '<div class="tr-pop-locations tr-pop-destinations">';
+    $res = '<div class="tr-pop-locations tr-pop-destinations tr-users-container">';     //container start
     $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
     for ($row = 0; $row < $numRows; $row++) {
-        $res .= '<div class="row">';
-        for ($i = 0; $i < $itemsPerRow; $i++) {
+        $res .= '<div class="tr-rows-container">';   //row start
+        for ($section = 0; $section < $sectionsPerRow; $section++) {
+            $res .= '<div class="row col-lg-6">';   //section start
+            for($i = 0; $i < $itemsPerSection; $i++){
+                $dataIndex = $row * $itemsPerRow + $section*$itemsPerSection + $i;
+                if ($dataIndex >= count($data))
+                    break;
 
-            $dataIndex = $row * $itemsPerRow + $i;
-            if ($dataIndex >= count($data))
-                break;
+                $url = $data[$dataIndex]['url'];
+                $name = $data[$dataIndex]['name'];
+                $postCount = $data[$dataIndex]['post_count'];
+                $avatar = $data[$dataIndex]['avatar'];
+                if(!$avatar) 
+                    $avatar = 'http://test4.thenextturn.com/wp-content/uploads/2015/05/almeria_92658m1.jpg';
 
-            $url = $data[$dataIndex]['url'];
-            $name = $data[$dataIndex]['name'];
-            $postCount = $data[$dataIndex]['post_count'];
-            $avatar = $data[$dataIndex]['avatar'];
-            if(!$avatar) 
-                $avatar = 'http://test4.thenextturn.com/wp-content/uploads/2015/05/almeria_92658m1.jpg';
-
-            $res .= '<div class="col-sm-3" height="100px" style="padding-left:15px; padding-right:5px;">';
-            //$res .= '<div style="margin-right:-10px; margin-left:-10px;">';
-            $res .= '<a href="' . $url . '" class="tr-users-column">';
-            $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\" max-height=\"85px\">" . '<br>';
-            $res .= "<h3>$name ($postCount)</h3>";
-            $res .= '</a>';
-            //$res .= '</div>';
-            $res .= '</div>';
+                $res .= '<div class="col-xs-6 col-sm-3 col-md-3 tr-users-row">';
+                $res .= '<a href="' . $url . '" class="tr-users-column">';
+                $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\" max-height=\"85px\">" . '<br>';
+                $res .= "<h5>$name ($postCount)</h5>";
+                $res .= '</a>';
+                $res .= '</div>';
+            }
+            $res .= "</div>";   //section end
         }
-        $res .= '</div>';//<div class="row">
+        $res .= '</div>';   //row end
     }
-    $res .= '</div>';//<div class="tr-pop-locations tr-pop-destinations">
+    $res .= '</div>';   //container end
     return $res;
 }
 
