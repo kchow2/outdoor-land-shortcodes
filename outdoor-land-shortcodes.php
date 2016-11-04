@@ -805,8 +805,8 @@ function activity_post_map_sc($atts) {
         'continent'=>'tr-continent',
         );
     
-    if(!isset($atts['slug']) or !isset($atts['type'])){
-        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX> (limit=<XX>)]");
+    if(!isset($atts['type'])){
+        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX> activity=<XX> author=<ID> (limit=<XX>)]");
     }
     if(!isset($atts['limit']))
         $limit = 10;
@@ -816,24 +816,41 @@ function activity_post_map_sc($atts) {
     $queryArgs = array(
         'post_type' => 'post',
         'posts_per_page'=>-1,   //apparently leaving this parameter out results in the default limit of 10 results returned!
-        'tax_query' => array(
+    );
+    
+    if(isset($atts['slug'])){
+        $queryArgs['tax_query'] = array(
             array(
                 'taxonomy' => $taxonomyLookup[$atts['type']],
                 'field' => 'slug',
                 'terms' => $atts['slug'],
             ),
-        )
-    );
+        );
+    }
+    if(isset($atts['author'])){
+        $queryArgs['author'] = intval($atts['author']);
+    }
+    if(isset($atts['activity'])){
+        $parentCat = get_category_by_slug($atts['activity']);
+        $parentId = $parentCat->term_id;
+        $cats = array($parentId);
+        $childCats = get_categories(array('parent'=>$parentId));
+        foreach($childCats as $childCat){
+            $cats[] = $childCat->term_id;
+        }
+        $queryArgs['category__in'] = $cats;
+    }
 
     $locations = array();
     $postsByLocationID = array();
-    $query = new WP_Query($queryArgs);
-    while ($query->have_posts()) {
-        $query->the_post();
+    $posts = get_posts($queryArgs);
+    foreach($posts as $post1){
+        setup_postdata( $post1 );
         
-        $loc = getMostRelevantLocation(get_the_ID(), array_values($taxonomyLookup));    //returns a post object
-        if($loc === null) 
-            break;
+        $loc = getMostRelevantLocation($post1->ID, array_values($taxonomyLookup));    //returns a post object
+        if($loc === null) {
+            continue;
+        }
         $locations[$loc->ID] = $loc;
         
         //limit the number of posts per location
@@ -845,20 +862,26 @@ function activity_post_map_sc($atts) {
     
     //results - display the locations on a map. each location can have 1 or more posts, which are combined into a single marker.
     $res = '<div class="activity-post-map">';
-    $res .= do_shortcode('[wpv-map-render map_id="map-location-posts" map_height="450px"]');
+    $mapID = "map-location-posts".rand().rand();    //generate a unique map id
+    $res .= do_shortcode('[wpv-map-render map_id="'.$mapID.'" map_height="450px"]');
     foreach($postsByLocationID as $locID=>$posts){
+        $mapAddress = get_post_field( "wpcf-tr-map-address", $locID );
+        if(strlen($mapAddress) == 0){
+            //if the "wpcf-tr-map_address" field of the location is not filled out, then the map marker will fail to show up on the map.
+            continue;
+        }
+
         //location map markers
         $locName = $locations[$locID]->post_title;
+        
         $locUrl = get_post_permalink($locations[$locID]->ID);
         $postsStr = '<div class="tr-marker-title"><a href="'.$locUrl.'" target="_blank">'.$locName.'</a></div><br>';
-        
         foreach($posts as $p){
             $postsStr .= '<a href="'.$p['url'].'" target="_blank">' . $p['title'] . "</a><br>";
         }
-        $res .= do_shortcode(sprintf('[wpv-map-marker map_id="map-location-posts" marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $locations[$locID]->post_name, $locID, $postsStr));
+        $res .= do_shortcode(sprintf('[wpv-map-marker map_id="'.$mapID.'" marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $locations[$locID]->post_name, $locID, $postsStr));    
     }
     $res .= "</div>";
-
     wp_reset_postdata();
     return $res;
 }
