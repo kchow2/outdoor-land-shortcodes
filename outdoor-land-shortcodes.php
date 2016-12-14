@@ -295,13 +295,14 @@ function top_contributors_sc($atts) {
     $title = $atts['title'];
     $targetTaxonomy = $atts['parent'];
     $targetTerm = $atts['parentterm'];
-    $targetPostTypes = array('activity', 'guide', 'gear-review');
+    $targetPostTypes = array('post', 'guide', 'gear-review');
     $maxPostCount = $atts['max'];
 
     $queryArgs = array(
         'posts_per_page' => -1, //return all the categories here, and filter them later...
         'orderby' => 'name',
         'order' => 'ASC',
+        'role'=>'author',
     );
 
     $query = new WP_User_Query($queryArgs);
@@ -362,40 +363,40 @@ add_shortcode('top-contributors', 'top_contributors_sc');
 function top_contributors_format_result($title, $data) {
     if (empty($data))
         return '';
-
-    $itemsPerRow = 8;
-    $sectionsPerRow = 2;
-    $numRows = ceil(count($data) / $itemsPerRow);
-    $itemsPerSection = $itemsPerRow / $sectionsPerRow;
-
+    
+    $count = 0;
+    $closingDiv = true;
     $res = '<div class="tr-pop-locations tr-pop-destinations tr-users-container">';     //container start
     $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
-    for ($row = 0; $row < $numRows; $row++) {
-        $res .= '<div class="tr-rows-container">';   //row start
-        for ($section = 0; $section < $sectionsPerRow; $section++) {
-            $res .= '<div class="row col-lg-6">';   //section start
-            for($i = 0; $i < $itemsPerSection; $i++){
-                $dataIndex = $row * $itemsPerRow + $section*$itemsPerSection + $i;
-                if ($dataIndex >= count($data))
-                    break;
-
-                $url = $data[$dataIndex]['url'];
-                $name = $data[$dataIndex]['name'];
-                $postCount = $data[$dataIndex]['post_count'];
-                $avatar = $data[$dataIndex]['avatar'];
-                if(!$avatar) 
-                    $avatar = 'http://test4.thenextturn.com/wp-content/uploads/2015/05/almeria_92658m1.jpg';
-
-                $res .= '<div class="col-xs-6 col-sm-3 col-md-3 tr-users-row">';
-                $res .= '<a href="' . $url . '" class="tr-users-column">';
-                $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\" max-height=\"85px\">" . '<br>';
-                $res .= "<h5>$name ($postCount)</h5>";
-                $res .= '</a>';
-                $res .= '</div>';
-            }
-            $res .= "</div>";   //section end
+    
+    foreach($data as $d){
+        if($count%3==0){
+            $closingDiv = false;
+            $res .= '<div class="row col-lg-4 col-sm-6 tr-user-row">';
         }
-        $res .= '</div>';   //row end
+        $res .= '<div class="col-xs-4 tr-user-item">';
+        $url = $d['url'];
+        $name = $d['name'];
+        $postCount = $d['post_count'];
+        $avatar = $d['avatar'];
+        if(!$avatar) 
+            $avatar = 'http://test4.thenextturn.com/wp-content/uploads/2015/05/almeria_92658m1.jpg';
+        
+        $res .= '<a href="' . $url . '">';
+        $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\" height=\"200\" width=\"200\">" . '<br>';
+        $res .= "<h5>$name ($postCount)</h5>";
+        $res .= '</a>';
+        $res .= '</div>';
+        
+        if($count%3==2){
+            $res .= '</div>';
+            $closingDiv = true;
+        }
+        $count++;
+    }
+    if(!$closingDiv){
+        $res .= '</div>';
+        $closingDiv = true;
     }
     $res .= '</div>';   //container end
     return $res;
@@ -805,7 +806,7 @@ function activity_post_map_sc($atts) {
         'continent'=>'tr-continent',
         );
     
-    if(!isset($atts['type'])){
+    if(!isset($atts['type']) and isset($atts['slug'])){
         return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX> activity=<XX> author=<ID> (limit=<XX>)]");
     }
     if(!isset($atts['limit']))
@@ -845,7 +846,6 @@ function activity_post_map_sc($atts) {
     $postsByLocationID = array();
     $posts = get_posts($queryArgs);
     foreach($posts as $post1){
-        setup_postdata( $post1 );
         
         $loc = getMostRelevantLocation($post1->ID, array_values($taxonomyLookup));    //returns a post object
         if($loc === null) {
@@ -857,13 +857,13 @@ function activity_post_map_sc($atts) {
         if(array_key_exists($loc->ID, $postsByLocationID) and count($postsByLocationID[$loc->ID]) >= $limit)
             break;
         
-        $postsByLocationID[$loc->ID][] = array('ID'=>get_the_ID(), 'title'=>get_the_title(), 'url'=>get_permalink());
+        $postsByLocationID[$loc->ID][] = array('ID'=>$post1->ID, 'title'=>$post1->post_title, 'url'=>get_permalink($post1));
     }
     
     //results - display the locations on a map. each location can have 1 or more posts, which are combined into a single marker.
     $res = '<div class="activity-post-map">';
     $mapID = "map-location-posts".rand().rand();    //generate a unique map id
-    $res .= do_shortcode('[wpv-map-render map_id="'.$mapID.'" map_height="450px"]');
+    $res .= do_shortcode('[wpv-map-render map_id="'.$mapID.'" map_height="450px" scrollwheel="off"]');
     foreach($postsByLocationID as $locID=>$posts){
         $mapAddress = get_post_field( "wpcf-tr-map-address", $locID );
         if(strlen($mapAddress) == 0){
@@ -879,7 +879,7 @@ function activity_post_map_sc($atts) {
         foreach($posts as $p){
             $postsStr .= '<a href="'.$p['url'].'" target="_blank">' . $p['title'] . "</a><br>";
         }
-        $res .= do_shortcode(sprintf('[wpv-map-marker map_id="'.$mapID.'" marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $locations[$locID]->post_name, $locID, $postsStr));    
+        $res .= do_shortcode(sprintf('[wpv-map-marker map_id=%s marker_id="marker-%s" marker_field="wpcf-tr-map-address" id="%d"]%s[/wpv-map-marker]', $mapID, $locations[$locID]->post_name, $locID, $postsStr));    
     }
     $res .= "</div>";
     wp_reset_postdata();
