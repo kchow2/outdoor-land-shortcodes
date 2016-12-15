@@ -315,7 +315,10 @@ function top_contributors_sc($atts) {
     foreach ($userQueryResults as $user) {
         $authorUrl = get_author_posts_url( $user->ID );//'/authors/'.$user->nickname;
         $userName = $user->nickname;
-        $avatar = get_user_meta($user->ID, 'wpcf-tr-user-profile-image', true);
+        //$avatar = get_user_meta($user->ID, 'wpcf-tr-user-profile-image', true);
+        //$avatarExt = substr($avatar,strlen($avatar)-4, 4);
+        //$avatar = substr($avatar,0,strlen($avatar)-4) . "-wpcf_200x200" . $avatarExt; //big hack, but i need to get the image with the correct aspect ratio...
+        $avatar = types_render_usermeta_field('tr-user-profile-image', array('user_id'=>$user->ID, 'url'=>true, 'width'=>200, 'height'=>200, 'resize'=>'crop'));
         $postCount = 0;
         foreach ($targetPostTypes as $postType) {
             //get all posts of each type from this author for this location
@@ -383,7 +386,7 @@ function top_contributors_format_result($title, $data) {
             $avatar = 'http://test4.thenextturn.com/wp-content/uploads/2015/05/almeria_92658m1.jpg';
         
         $res .= '<a href="' . $url . '">';
-        $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\" height=\"200\" width=\"200\">" . '<br>';
+        $res .= "<image alt=\"$name\" title=\"$name\" src=\"$avatar\">" . '<br>';
         $res .= "<h5>$name ($postCount)</h5>";
         $res .= '</a>';
         $res .= '</div>';
@@ -858,6 +861,11 @@ function activity_post_map_sc($atts) {
             break;
         
         $postsByLocationID[$loc->ID][] = array('ID'=>$post1->ID, 'title'=>$post1->post_title, 'url'=>get_permalink($post1));
+    }
+    
+    //if there are no markers, skip rendering the map
+    if(count($postsByLocationID) === 0){
+        return "";
     }
     
     //results - display the locations on a map. each location can have 1 or more posts, which are combined into a single marker.
