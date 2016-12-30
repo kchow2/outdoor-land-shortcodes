@@ -22,6 +22,7 @@ function popular_loc_sc($atts) {
         'country' => 'Countries',
         'continent' => 'Continents',
         'state' => 'States',
+        'route' => 'Routes',
     );
     $taxonomyLookup = array(
         'destination' => 'tr-destination',
@@ -32,6 +33,7 @@ function popular_loc_sc($atts) {
         'country' => 'tr-country',
         'continent' => 'tr-continent',
         'state' => 'tr-state',
+        'route' => 'tr-route',
     );
 
     if (!isset($atts['parent']) || !array_key_exists($atts['parent'], $taxonomyLookup))
@@ -78,7 +80,7 @@ function popular_loc_sc($atts) {
             $postTitle = the_title("", "", false);
             $postUrl = get_permalink();
             $postSlug = basename(get_permalink());
-
+            
             //for each location do another query to find the number of 'activities' for that location
             $activityQueryArgs = array(
                 'post_type' => 'activity',
@@ -126,15 +128,154 @@ function popular_loc_format_result($title, $totalActivityCount, $data) {
     if (empty($data))
         return '';
 
-    $res = '<div class="tr-pop-locations tr-pop-destinations">';
+    $res = '<div class="tr-pop-locations">';
     $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
-    $res .= '<ul style="width:100%; padding-left:0px; overflow:hidden;">';
+    $res .= '<ul>';
     foreach ($data as $location) {
         $locUrl = $location['url'];
         $locTitle = $location['title'];
         $activityCount = $location['activity_count'];
 
-        $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+        $res .= '<li class="tr-pop-item">';
+        $res .= "<a href=\"$locUrl\">$locTitle</a>";
+        $res .= ' (' . $activityCount . ') ';
+        $res .= '</li>';
+    }
+    $res .= '</ul>';
+    $res .= '</div>';
+    return $res;
+}
+
+//popular-loc shortcode.
+//Usage: [popular-loc2 parent="continent" parentterm="north-america" target="country" max="50"]
+function popular_loc_sc2($atts) {
+    $pluralsLookup = array(
+        'destination' => 'Destinations',
+        'subregion' => 'Sub-regions',
+        'sub-region' => 'Sub-regions',
+        'region' => 'Regions',
+        'city' => 'Cities',
+        'country' => 'Countries',
+        'continent' => 'Continents',
+        'state' => 'States',
+        'route' => 'Routes',
+    );
+    $taxonomyLookup = array(
+        'destination' => 'tr-destination',
+        'subregion' => 'tr-subregion',
+        'sub-region' => 'tr-subregion',
+        'region' => 'tr-region',
+        'city' => 'tr-city',
+        'country' => 'tr-country',
+        'continent' => 'tr-continent',
+        'state' => 'tr-state',
+        'route' => 'tr-route',
+    );
+
+    if (!isset($atts['parent']) || !array_key_exists($atts['parent'], $taxonomyLookup))
+        return 'popular-loc: parent attribute not valid! Must be one of {' . implode(", ", array_keys($taxonomyLookup)) . "}.";
+    if (!isset($atts['parentterm']))
+        return 'popular-loc: parentterm attribute not set!';
+    if (!isset($atts['target']) || !array_key_exists($atts['target'], $taxonomyLookup))
+        return 'popular-loc: target attribute not valid! Must be one of {' . implode(", ", array_keys($taxonomyLookup)) . "}.";
+    if (!isset($atts['max']))
+        $atts['max'] = 15;
+    if (!isset($atts['title']))
+        $atts['title'] = "Popular " . $pluralsLookup[$atts['target']];
+
+    $title = $atts['title'];
+    $parentTaxSlug = $taxonomyLookup[$atts['parent']];
+    $parentTermSlug = $atts['parentterm'];
+    $targetLocationType = $atts['target'];
+    $targetTaxSlug = $taxonomyLookup[$atts['target']];
+    $maxPostCount = $atts['max'];
+
+    $queryArgs = array(
+        'post_type' => 'location',
+        'posts_per_page' => -1, //can't limit the query here, since some locations returned will have 0 activities and won't be displayed.
+        'orderby' => 'title',
+        'order' => 'ASC',
+        //'meta_key'=>'tr-location-type',
+        //'meta_value'=>$targetLocationType,
+        'tax_query' => array(
+            array(
+                'taxonomy' => $parentTaxSlug,
+                'field' => 'slug',
+                'terms' => array($parentTermSlug),
+            ),
+        )
+    );
+
+    $query = new WP_Query($queryArgs);
+    $locationCount = $query->found_posts;
+    $totalActivityCount = 0;
+    $locationsDisplayed = 0;
+    $locationsHidden = 0;
+    $resultData = array();
+
+    if ($query->have_posts()) {
+        while ($query->have_posts() and $locationsDisplayed < $maxPostCount) {
+            $query->the_post();
+            $postTitle = the_title("", "", false);
+            $postUrl = get_permalink();
+            $postSlug = basename(get_permalink());
+
+            //for each location do another query to find the number of 'activities' for that location
+            $activityQueryArgs = array(
+                'post_type' => 'post',
+                'posts_per_page' => -1,
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => $targetTaxSlug,
+                        'field' => 'slug',
+                        'terms' => array($postSlug),
+                    ),
+                )
+            );
+            $activityQuery = new WP_Query($activityQueryArgs);
+            $activityCount = $activityQuery->found_posts;   //only interested in the number of results, not the actual activities
+            $totalActivityCount += $activityCount;
+
+            if ($activityCount > 0) {
+                $resultData[] = array('url' => $postUrl, 'title' => $postTitle, 'activity_count' => $activityCount);
+                $locationsDisplayed++;
+            } else {
+                $locationsHidden++;
+            }
+        }
+    }
+
+    //Generate the output
+    $res = popular_loc_format_result2($title, $totalActivityCount, $resultData);
+    //$res .= "title=$title<br>";
+    //$res .= "parentTaxSlug=$parentTaxSlug<br>";
+    //$res .= "parentTermSlug=$parentTermSlug<br>";
+    //$res .= "targetPostType=$targetPostType<br>";
+    //$res .= "maxPostCount=$maxPostCount<br>";
+    //$res .= $query->request . "<br>";
+    //$res .= "Locations found: $locationCount<br>";
+    //$res .= "Locations displayed: $locationsDisplayed<br>";
+    //$res .= "Locations hidden: $locationsHidden<br>";
+    wp_reset_postdata();
+    return $res;
+}
+
+add_shortcode('popular-loc2', 'popular_loc_sc2');
+
+//helper function to format the HTML output from the found results
+function popular_loc_format_result2($title, $totalActivityCount, $data) {
+    if (empty($data))
+        return '';
+
+    $res = '<div class="tr-pop-locations">';
+    $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
+    $res .= '<ul>';
+    foreach ($data as $location) {
+        $locUrl = $location['url'];
+        $locTitle = $location['title'];
+        $activityCount = $location['activity_count'];
+
+        $res .= '<li class="tr-pop-item">';
         $res .= "<a href=\"$locUrl\">$locTitle</a>";
         $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
@@ -169,74 +310,58 @@ function popular_activities_sc($atts) {
 
     $title = $atts['title'];
     $parentTaxSlug = $taxonomyLookup[$atts['parent']];
-    $targetPostType = 'activity-category';
     $parentTermSlug = $atts['parentterm'];
-    $targetTaxSlug = 'tr-activity-category';
     $maxPostCount = $atts['max'];
 
-    $queryArgs = array(
-        'post_type' => $targetPostType,
+    /*$queryArgs = array(
+        'post_type' => 'category',
         'posts_per_page' => -1, //return all the categories here, and filter them later...
         'orderby' => 'title',
         'order' => 'ASC',
     );
 
-    $query = new WP_Query($queryArgs);
-    $categoryCount = $query->found_posts;
+    $query = new WP_Query($queryArgs);*/
+    $categories = get_categories();
+    
     $totalActivityCount = 0;
     $categoriesDisplayed = 0;
     $categoriesHidden = 0;
     $resultData = array();
-    if ($query->have_posts()) {
-        while ($query->have_posts() and $categoriesDisplayed < $maxPostCount) {
-            $query->the_post();
-            $postTitle = the_title("", "", false);
-            $postUrl = get_permalink();
-            $postSlug = basename(get_permalink());
 
-            //for each category do another query to find the number of 'activities' for that category with the same location
-            $activityQueryArgs = array(
-                'post_type' => 'activity',
-                'posts_per_page' => -1,
-                'tax_query' => array(
-                    'relationship' => 'AND',
-                    array(
-                        'taxonomy' => $targetTaxSlug,
-                        'field' => 'slug',
-                        'terms' => array($postSlug),
-                    ),
-                    array(
-                        'taxonomy' => $parentTaxSlug,
-                        'field' => 'slug',
-                        'terms' => array($parentTermSlug),
-                    ),
-                )
-            );
-            $activityQuery = new WP_Query($activityQueryArgs);
-            $activityCount = $activityQuery->found_posts;   //only interested in the number of results, not the actual activities
-            $totalActivityCount += $activityCount;
+    foreach($categories as $cat) {
+        if($categoriesDisplayed == $maxPostCount)
+            break;
 
-            if ($activityCount > 0) {
-                $resultData[] = array('url' => $postUrl, 'title' => $postTitle, 'activity_count' => $activityCount);
-                $categoriesDisplayed++;
-            } else {
-                $categoriesHidden++;
-            }
+        $postTitle = $cat->name;
+        $postUrl = get_category_link($cat->term_id);
+        $postSlug = $cat->slug;
+
+        //for each category do another query to find the number of 'activities' for that category with the same location
+        $activityQueryArgs = array(
+            'post_type' => 'post',
+            'posts_per_page' => -1,
+            'category_name' => $postSlug,
+            'tax_query' => array(
+                array(
+                    'taxonomy' => $parentTaxSlug,
+                    'field' => 'slug',
+                    'terms' => array($parentTermSlug),
+                ),
+            )
+        );
+        $activityQuery = new WP_Query($activityQueryArgs);
+        $activityCount = $activityQuery->found_posts;   //only interested in the number of results, not the actual activities
+        $totalActivityCount += $activityCount;
+        
+        if ($activityCount > 0) {
+            $resultData[] = array('url' => $postUrl, 'title' => $postTitle, 'activity_count' => $activityCount);
+            $categoriesDisplayed++;
+        } else {
+            $categoriesHidden++;
         }
     }
-
     //Generate the output
     $res = popular_activities_format_result($title, $totalActivityCount, $resultData);
-    //$res .= "title=$title<br>";
-    //$res .= "parentTaxSlug=$parentTaxSlug<br>";
-    //$res .= "parentTermSlug=$parentTermSlug<br>";
-    //$res .= "targetPostType=$targetPostType<br>";
-    //$res .= "targetTaxSlug=$targetTaxSlug<br>";
-    //$res .= "maxPostCount=$maxPostCount<br>";
-    //$res .= $query->request . "<br>";
-    //$res .= "Locations found: $categoryCount<br>";
-    //$res .= "Locations displayed: $categoriesDisplayed<br>";
-    //$res .= "Locations hidden: $categoriesHidden<br>";
     wp_reset_postdata();
     return $res;
 }
@@ -248,15 +373,15 @@ function popular_activities_format_result($title, $totalActivityCount, $data) {
     if (empty($data))
         return '';
 
-    $res = '<div class="tr-pop-locations tr-pop-destinations" style="overflow:auto;">';
+    $res = '<div class="tr-pop-locations">';
     $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
-    $res .= '<ul style="padding-left:0px; overflow:hidden;">';
+    $res .= '<ul>';
     foreach ($data as $category) {
         $url = $category['url'];
         $title = $category['title'];
         $activityCount = $category['activity_count'];
 
-        $res .= '<li style="text-align:left; width:50%; display:block; float:left;">';
+        $res .= '<li class="col-sm-4 tr-pop-act-item">';
         $res .= "<a href=\"$url\">$title</a>";
         $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
