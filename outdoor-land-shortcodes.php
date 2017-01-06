@@ -13,7 +13,8 @@ defined('ABSPATH') or die('No script kiddies please!');
 //popular-loc shortcode.
 //Usage: [popular-loc parent="continent" parentterm="north-america" target="country" max="50"]
 function popular_loc_sc($atts) {
-    $pluralsLookup = array(
+    return "!!WARNING: [popular-loc] is deprecated. Please use [popular-loc2] instead!!";
+    /*$pluralsLookup = array(
         'destination' => 'Destinations',
         'subregion' => 'Sub-regions',
         'sub-region' => 'Sub-regions',
@@ -118,7 +119,7 @@ function popular_loc_sc($atts) {
     //$res .= "Locations displayed: $locationsDisplayed<br>";
     //$res .= "Locations hidden: $locationsHidden<br>";
     wp_reset_postdata();
-    return $res;
+    return $res;*/
 }
 
 add_shortcode('popular-loc', 'popular_loc_sc');
@@ -373,22 +374,59 @@ function popular_activities_format_result($title, $totalActivityCount, $data) {
     if (empty($data))
         return '';
 
-    $res = '<div class="tr-pop-locations">';
-    $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
+    $res = '<div class="tr-pop-activities">';
+    $res .= '<h3 style="padding-left:15px;">' . $title . '</h3>';
+            
+    $res .= '<div class="col-sm-4">';
     $res .= '<ul>';
-    foreach ($data as $category) {
+    $i = 0;
+    for(; $i < count($data)/3;$i++){
+        $category = $data[$i];
         $url = $category['url'];
         $title = $category['title'];
         $activityCount = $category['activity_count'];
 
-        $res .= '<li class="col-sm-4 tr-pop-act-item">';
+        $res .= '<li class="tr-pop-act-item">';
         $res .= "<a href=\"$url\">$title</a>";
         $res .= ' (' . $activityCount . ') ';
         $res .= '</li>';
     }
     $res .= '</ul>';
     $res .= '</div>';
-    $res .= '<div style="clear:both;"></div>';
+    
+    $res .= '<div class="col-sm-4">';
+    $res .= '<ul>';
+    for(; $i < 2*count($data)/3;$i++){
+        $category = $data[$i];
+        $url = $category['url'];
+        $title = $category['title'];
+        $activityCount = $category['activity_count'];
+
+        $res .= '<li class="tr-pop-act-item">';
+        $res .= "<a href=\"$url\">$title</a>";
+        $res .= ' (' . $activityCount . ') ';
+        $res .= '</li>';
+    }
+    $res .= '</ul>';
+    $res .= '</div>';
+    
+    $res .= '<div class="col-sm-4">';
+    $res .= '<ul>';
+    for(; $i < count($data);$i++){
+        $category = $data[$i];
+        $url = $category['url'];
+        $title = $category['title'];
+        $activityCount = $category['activity_count'];
+
+        $res .= '<li class="tr-pop-act-item">';
+        $res .= "<a href=\"$url\">$title</a>";
+        $res .= ' (' . $activityCount . ') ';
+        $res .= '</li>';
+    }
+    $res .= '</ul>';
+    $res .= '</div>';
+
+    $res .= '</div>';//tr-pop-activities
     return $res;
 }
 
