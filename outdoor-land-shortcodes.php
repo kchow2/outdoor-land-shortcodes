@@ -478,9 +478,6 @@ function top_contributors_sc($atts) {
     foreach ($userQueryResults as $user) {
         $authorUrl = get_author_posts_url( $user->ID );//'/authors/'.$user->nickname;
         $userName = $user->nickname;
-        //$avatar = get_user_meta($user->ID, 'wpcf-tr-user-profile-image', true);
-        //$avatarExt = substr($avatar,strlen($avatar)-4, 4);
-        //$avatar = substr($avatar,0,strlen($avatar)-4) . "-wpcf_200x200" . $avatarExt; //big hack, but i need to get the image with the correct aspect ratio...
         $avatar = types_render_usermeta_field('tr-user-profile-image', array('user_id'=>$user->ID, 'url'=>true, 'width'=>200, 'height'=>200, 'resize'=>'crop'));
         $postCount = 0;
         foreach ($targetPostTypes as $postType) {
