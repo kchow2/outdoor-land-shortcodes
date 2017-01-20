@@ -443,6 +443,7 @@ function top_contributors_sc($atts) {
         'country' => 'tr-country',
         'continent' => 'tr-continent',
         'state' => 'tr-state',
+        'route' => 'tr-route',
         'activity-category' => 'tr-activity-category'
     );
 
