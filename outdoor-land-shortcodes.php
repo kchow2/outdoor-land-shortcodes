@@ -831,6 +831,7 @@ function hotel_search_format_result($locationName, $hotelSearchUrl){
  * Generates a map with markers for posts in the same location as the parent article. 
  * For each post, the most specific location is determined, and posts with the same location are merged into a single marker.
  * If there are no posts found, the map does not show up (intentionally).
+ * The actvity and author parameters are optional and can be used to filter the results by activity category and author. If they are not defined, it will return results from all activities and authors. 
  * The limit parameter limits the max posts per location, not the total posts.
  */
 function activity_post_map_sc($atts) {
