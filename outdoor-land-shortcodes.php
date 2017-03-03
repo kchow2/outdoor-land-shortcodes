@@ -3,152 +3,26 @@
 /*
   Plugin Name: Outdoor Land Shortcodes
   Plugin URI:  http://www.google.ca
-  Description: This plugin implements all the custom shortcode functionality for the 'Outdoor Lands' website. Usage: [popular-loc parent="continent" parentterm="north-america" target="country" max="50"]
+  Description: This plugin implements all the custom shortcode functionality for the 'Outdoor Lands' website.
   Version:     0.1
   Author:      Kevin Chow
   Author URI:  http://www.google.ca
  */
 defined('ABSPATH') or die('No script kiddies please!');
 
-//popular-loc shortcode.
-//Usage: [popular-loc parent="continent" parentterm="north-america" target="country" max="50"]
+/**popular-loc shortcode.
+ * Usage: [popular-loc parent="continent" parentterm="north-america" target="country" max="50"]
+ * This shortcode is deprecated. Use popular-loc2 instead.
+ */
 function popular_loc_sc($atts) {
     return "!!WARNING: [popular-loc] is deprecated. Please use [popular-loc2] instead!!";
-    /*$pluralsLookup = array(
-        'destination' => 'Destinations',
-        'subregion' => 'Sub-regions',
-        'sub-region' => 'Sub-regions',
-        'region' => 'Regions',
-        'city' => 'Cities',
-        'country' => 'Countries',
-        'continent' => 'Continents',
-        'state' => 'States',
-        'route' => 'Routes',
-    );
-    $taxonomyLookup = array(
-        'destination' => 'tr-destination',
-        'subregion' => 'tr-subregion',
-        'sub-region' => 'tr-subregion',
-        'region' => 'tr-region',
-        'city' => 'tr-city',
-        'country' => 'tr-country',
-        'continent' => 'tr-continent',
-        'state' => 'tr-state',
-        'route' => 'tr-route',
-    );
-
-    if (!isset($atts['parent']) || !array_key_exists($atts['parent'], $taxonomyLookup))
-        return 'popular-loc: parent attribute not valid! Must be one of {' . implode(", ", array_keys($taxonomyLookup)) . "}.";
-    if (!isset($atts['target']) || !array_key_exists($atts['target'], $taxonomyLookup))
-        return 'popular-loc: target attribute not valid! Must be one of {' . implode(", ", array_keys($taxonomyLookup)) . "}.";
-    if (!isset($atts['parentterm']))
-        return 'popular-loc: parentterm attribute not set!';
-    if (!isset($atts['max']))
-        $atts['max'] = 15;
-    if (!isset($atts['title']))
-        $atts['title'] = "Popular " . $pluralsLookup[$atts['target']];
-
-    $title = $atts['title'];
-    $parentTaxSlug = $taxonomyLookup[$atts['parent']];
-    $parentTermSlug = $atts['parentterm'];
-    $targetPostType = $atts['target'];
-    $targetTaxSlug = $taxonomyLookup[$atts['target']];
-    $maxPostCount = $atts['max'];
-
-    $queryArgs = array(
-        'post_type' => $targetPostType,
-        'posts_per_page' => -1, //can't limit the query here, since some locations returned will have 0 activities and won't be displayed.
-        'orderby' => 'title',
-        'order' => 'ASC',
-        'tax_query' => array(
-            array(
-                'taxonomy' => $parentTaxSlug,
-                'field' => 'slug',
-                'terms' => array($parentTermSlug),
-            ),
-        )
-    );
-
-    $query = new WP_Query($queryArgs);
-    $locationCount = $query->found_posts;
-    $totalActivityCount = 0;
-    $locationsDisplayed = 0;
-    $locationsHidden = 0;
-    $resultData = array();
-    if ($query->have_posts()) {
-        while ($query->have_posts() and $locationsDisplayed < $maxPostCount) {
-            $query->the_post();
-            $postTitle = the_title("", "", false);
-            $postUrl = get_permalink();
-            $postSlug = basename(get_permalink());
-            
-            //for each location do another query to find the number of 'activities' for that location
-            $activityQueryArgs = array(
-                'post_type' => 'activity',
-                'posts_per_page' => -1,
-                'tax_query' => array(
-                    array(
-                        'taxonomy' => $targetTaxSlug,
-                        'field' => 'slug',
-                        'terms' => array($postSlug),
-                    ),
-                )
-            );
-            $activityQuery = new WP_Query($activityQueryArgs);
-            $activityCount = $activityQuery->found_posts;   //only interested in the number of results, not the actual activities
-            $totalActivityCount += $activityCount;
-
-            if ($activityCount > 0) {
-                $resultData[] = array('url' => $postUrl, 'title' => $postTitle, 'activity_count' => $activityCount);
-                $locationsDisplayed++;
-            } else {
-                $locationsHidden++;
-            }
-        }
-    }
-
-    //Generate the output
-    $res = popular_loc_format_result($title, $totalActivityCount, $resultData);
-    //$res .= "title=$title<br>";
-    //$res .= "parentTaxSlug=$parentTaxSlug<br>";
-    //$res .= "parentTermSlug=$parentTermSlug<br>";
-    //$res .= "targetPostType=$targetPostType<br>";
-    //$res .= "maxPostCount=$maxPostCount<br>";
-    //$res .= $query->request . "<br>";
-    //$res .= "Locations found: $locationCount<br>";
-    //$res .= "Locations displayed: $locationsDisplayed<br>";
-    //$res .= "Locations hidden: $locationsHidden<br>";
-    wp_reset_postdata();
-    return $res;*/
 }
-
 add_shortcode('popular-loc', 'popular_loc_sc');
 
-//helper function to format the HTML output from the found results
-function popular_loc_format_result($title, $totalActivityCount, $data) {
-    if (empty($data))
-        return '';
-
-    $res = '<div class="tr-pop-locations">';
-    $res .= '<h3 style="text-align:left;">' . $title . '</h3>';
-    $res .= '<ul>';
-    foreach ($data as $location) {
-        $locUrl = $location['url'];
-        $locTitle = $location['title'];
-        $activityCount = $location['activity_count'];
-
-        $res .= '<li class="tr-pop-item">';
-        $res .= "<a href=\"$locUrl\">$locTitle</a>";
-        $res .= ' (' . $activityCount . ') ';
-        $res .= '</li>';
-    }
-    $res .= '</ul>';
-    $res .= '</div>';
-    return $res;
-}
-
-//popular-loc shortcode.
-//Usage: [popular-loc2 parent="continent" parentterm="north-america" target="country" max="50"]
+/**popular-loc shortcode.
+ * Usage: [popular-loc2 parent="continent" parentterm="north-america" target="country" max="50"]
+ * Generates a list of locations that are a child location of a parent location, with a count of the number of articles written about each child location.
+ */
 function popular_loc_sc2($atts) {
     $pluralsLookup = array(
         'destination' => 'Destinations',
@@ -286,8 +160,10 @@ function popular_loc_format_result2($title, $totalActivityCount, $data) {
     return $res;
 }
 
-//popular-activities shortcode. Displays a list of activity categories for a location, with the article count for each category.
-//Usage: [popular-activities parent="continent" parentterm="north-america" max="50"]
+/**popular-activities shortcode. 
+ * Usage: [popular-activities parent="continent" parentterm="north-america" max="50"]
+ * Displays a list of activity categories for a location, with the article count for each category.
+ */
 function popular_activities_sc($atts) {
     $taxonomyLookup = array(
         'destination' => 'tr-destination',
@@ -314,14 +190,6 @@ function popular_activities_sc($atts) {
     $parentTermSlug = $atts['parentterm'];
     $maxPostCount = $atts['max'];
 
-    /*$queryArgs = array(
-        'post_type' => 'category',
-        'posts_per_page' => -1, //return all the categories here, and filter them later...
-        'orderby' => 'title',
-        'order' => 'ASC',
-    );
-
-    $query = new WP_Query($queryArgs);*/
     $categories = get_categories();
     
     $totalActivityCount = 0;
@@ -430,9 +298,11 @@ function popular_activities_format_result($title, $totalActivityCount, $data) {
     return $res;
 }
 
-//top-contributors shortcode. Displays a list of top contributors for a location or activity category.
-//Usage: [top-contributors parent="continent" parentterm="north-america" max="50"]
-//Usage: [top-contributors parent="activity-category" parentterm="cycling" max="50"]
+/**top-contributors shortcode. 
+ * Usage: [top-contributors parent="continent" parentterm="north-america" max="50"]
+ * Usage: [top-contributors parent="activity-category" parentterm="cycling" max="50"]
+ * Displays a list of top contributors for a location or activity category. This shortcode only counts posts of type 'post', 'guide', and 'gear-review'
+ */
 function top_contributors_sc($atts) {
     $taxonomyLookup = array(
         'destination' => 'tr-destination',
@@ -462,8 +332,9 @@ function top_contributors_sc($atts) {
     $targetPostTypes = array('post', 'guide', 'gear-review');
     $maxPostCount = $atts['max'];
 
+    //get a list of all authors
     $queryArgs = array(
-        'posts_per_page' => -1, //return all the categories here, and filter them later...
+        'posts_per_page' => -1,
         'orderby' => 'name',
         'order' => 'ASC',
         'role'=>'author',
@@ -477,7 +348,7 @@ function top_contributors_sc($atts) {
     $usersHidden = 0;
     $resultData = array();
     foreach ($userQueryResults as $user) {
-        $authorUrl = get_author_posts_url( $user->ID );//'/authors/'.$user->nickname;
+        $authorUrl = get_author_posts_url( $user->ID );
         $userName = $user->nickname;
         $avatar = types_render_usermeta_field('tr-user-profile-image', array('user_id'=>$user->ID, 'url'=>true, 'width'=>200, 'height'=>200, 'resize'=>'crop'));
         $postCount = 0;
@@ -510,14 +381,6 @@ function top_contributors_sc($atts) {
     }
     //Generate the output
     $res = top_contributors_format_result($title, $resultData);
-    //$res .= "parentTaxSlug=$parentTaxSlug<br>";
-    //$res .= "parentTermSlug=$parentTermSlug<br>";
-    //$res .= "targetPostType=$targetPostType<br>";
-    //$res .= "maxPostCount=$maxPostCount<br>";
-    //$res .= $query->request . "<br>";
-    //$res .= "Users found: $userCount<br>";
-    //$res .= "Users displayed: $usersDisplayed<br>";
-    //$res .= "Users hidden: $usersHidden<br>";
     wp_reset_postdata();
     return $res;
 }
@@ -566,8 +429,10 @@ function top_contributors_format_result($title, $data) {
     return $res;
 }
 
-//popular-cat-loc shortcode.
-//Usage: [popular-loc category="cycling" target="country" max="50"]
+/**popular-cat-loc shortcode.
+ * Usage: [popular-loc category="cycling" target="country" max="50"]
+ * Counts the number of articles that exist for a certain category per location. The location type must be 'country', 'city', 'continent', etc.
+ */
 function popular_cat_loc_sc($atts) {
     $pluralsLookup = array(
         'destination' => 'Destinations',
@@ -627,7 +492,7 @@ function popular_cat_loc_sc($atts) {
             $query->the_post();
             
             $locationTerms = wp_get_post_terms(get_the_ID(), $targetTaxSlug);
-            //echo $locationTerms;
+
             foreach($locationTerms as $locTerm){
                 $locName = $locTerm->name;
                 if(isset($locationArticleCount[$locName]))
@@ -695,8 +560,11 @@ function popular_cat_loc_format_result($title, $data) {
 }
 
 
-//author-footprint shortcode.
-//Usage: [author-footprint author="<author_id>"]
+/**author-footprint shortcode.
+ * Usage: [author-footprint author="<author_id>"]
+ * Counts the number of articles an author has written about countries, regions, cities, and destinations, with the location name and article count, linked to the appropriate location page.
+ * Also displays the number of guides and gear reviews the author has written.
+ */
 function author_footprint_sc($atts) {
     if (!isset($atts['author']) || !is_numeric($atts['author']))
         return 'author-footprint: author attribute not valid! Must be a valid author Id.';
@@ -704,7 +572,7 @@ function author_footprint_sc($atts) {
     $title = 'My Footprint';
     //$maxPostCountPerSection = 15;
     
-    //get all the activities for this category
+    //get all posts by the author
     $queryArgs = array(
         'author' => $authorId,
         'posts_per_page' => -1,
@@ -793,7 +661,7 @@ function author_footprint_sc($atts) {
     usort($regionData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
     usort($destinationData, function ($a, $b){return strcasecmp($a['title'], $b['title']);});
     
-    //post counts for tips nad reviews
+    //post counts for tips and reviews
     $guidePostCount = count_user_posts($authorId, 'guide');
     $reviewPostCount = count_user_posts($authorId, 'gear-review');
 
@@ -881,6 +749,11 @@ function author_footprint_format_result($title, $countryData, $cityData, $region
     return $res;
 }
 
+/**hotel-search shortcode.
+ * Usage: [hotel-search]
+ * Generates a hotel search link. It searches the field 'wpcf-tr-hotel-search' for a hotel search url. If a url is defined for the current post, it uses that. 
+ * Otherwise, it checks the parent locations sequentially upwards until it finds one. If no url is found for any of the parents, then this shortcode outputs nothing.
+ */
 function hotel_search_sc($atts) {
     $taxonomyLookup = array(
         'destination' => 'tr-destination',
@@ -897,8 +770,7 @@ function hotel_search_sc($atts) {
     
     //if the $hotelSearchUrl is not present for this location, then we need to search parent locations until we find one
     if(!$locationName || !$hotelSearchUrl){
-        //get the metadata for the current location page.
-        //We need the subregion, region, city, state, country, continent of this location
+        //get the metadata for the current location page. We need the terms for each of the taxonomies in $taxonomyLookup
         $articleId = get_the_ID(); 
         foreach($taxonomyLookup as $postType=>$tax){
             
@@ -954,9 +826,12 @@ function hotel_search_format_result($locationName, $hotelSearchUrl){
     return $res;
 }
 
-/**
+/**activity-post-map shortcode
+ * Usage: [activity-post-map slug="Canada" type="country" (activity="cycling,hiking") (author="1") (limit="30")]
  * Generates a map with markers for posts in the same location as the parent article. 
  * For each post, the most specific location is determined, and posts with the same location are merged into a single marker.
+ * If there are no posts found, the map does not show up (intentionally).
+ * The limit parameter limits the max posts per location, not the total posts.
  */
 function activity_post_map_sc($atts) {
     $taxonomyLookup = array(
@@ -968,15 +843,12 @@ function activity_post_map_sc($atts) {
         'region'=>'tr-region',
         'country'=>'tr-country',
         'continent'=>'tr-continent',
-        );
+    );
     
     if(!isset($atts['type']) and isset($atts['slug'])){
-        return htmlspecialchars("Usage: [activity-post-map slug=<XX> type=<XX> activity=<XX> author=<ID> (limit=<XX>)]");
+        return htmlspecialchars('Usage: [activity-post-map slug="Canada" type="country" (activity="cycling,hiking") (author="1") (limit="30")]');
     }
-    if(!isset($atts['limit']))
-        $limit = 10;
-    else
-        $limit = intval($atts['limit']);
+    $limit = isset($atts['limit']) ? intval($atts['limit']) : 10;
     
     $queryArgs = array(
         'post_type' => 'post',
@@ -995,13 +867,21 @@ function activity_post_map_sc($atts) {
     if(isset($atts['author'])){
         $queryArgs['author'] = intval($atts['author']);
     }
+    //$atts['activity'] - a comma separated list of category slugs.
     if(isset($atts['activity'])){
-        $parentCat = get_category_by_slug($atts['activity']);
-        $parentId = $parentCat->term_id;
-        $cats = array($parentId);
-        $childCats = get_categories(array('parent'=>$parentId));
-        foreach($childCats as $childCat){
-            $cats[] = $childCat->term_id;
+        $cats = array();
+        $parentCats = explode(",",$atts['activity']);
+        foreach($parentCats as $parentCatName){
+            $parentCat = get_category_by_slug($parentCatName);
+            if($parentCat == null){
+                return "activity_post_map: category '".$parentCatName."' not found.";
+            }
+            $parentId = $parentCat->term_id;
+            $cats[] = $parentId;
+            $childCats = get_categories(array('parent'=>$parentId));
+            foreach($childCats as $childCat){
+                $cats[] = $childCat->term_id;
+            }
         }
         $queryArgs['category__in'] = $cats;
     }
@@ -1072,7 +952,7 @@ function getMostRelevantLocation($postID, array $taxonomies){
         }
         if($minTerm != null){
             $queryArgs = array(
-                'post_type'=>substr($minTerm->taxonomy, 3), //remove the 'tr-' in front of the term
+                'post_type'=>'location', // substr($minTerm->taxonomy, 3) remove the 'tr-' in front of the term
                 'tax_query' => array(
                     array(
                             'taxonomy' => $minTerm->taxonomy,
